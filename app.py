@@ -1,19 +1,11 @@
 import os
-import time
 from flask import Flask, render_template, request
-from google import genai
+from groq import Groq
 
 app = Flask(__name__)
 
-api_key = os.environ.get("GEMINI_API_KEY")
-client = genai.Client(api_key=api_key) if api_key else None
-
-# Ekta busy thakle onnotay jabe
-MODELS_TO_TRY = [
-    "gemini-3.8-flash",
-    "gemini-3.8-pro",
-    "gemini-2.5-pro"
-]
+api_key = os.environ.get("GROQ_API_KEY")
+client = Groq(api_key=api_key) if api_key else None
 
 @app.route("/", methods=["GET", "POST"])
 def home():
@@ -22,25 +14,19 @@ def home():
     if request.method == "POST":
         user_prompt = request.form.get("prompt", "")
         if client and user_prompt:
-            success = False
-            last_err = ""
-            for m in MODELS_TO_TRY:
-                for _ in range(2):
-                    try:
-                        response = client.models.generate_content(
-                            model=m,
-                            contents=user_prompt
-                        )
-                        ai_response = response.text
-                        success = True
-                        break
-                    except Exception as e:
-                        last_err = str(e)
-                        time.sleep(1)
-                if success:
-                    break
-            if not success:
-                ai_response = f"Models are temporarily overloaded. Please try again. Details: {last_err}"
+            try:
+                chat_completion = client.chat.completions.create(
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": user_prompt,
+                        }
+                    ],
+                    model="llama-3.3-70b-versatile",
+                )
+                ai_response = chat_completion.choices[0].message.content
+            except Exception as e:
+                ai_response = f"Error: {str(e)}"
         elif not client:
             ai_response = "API Key not configured properly."
 
