@@ -1,10 +1,11 @@
 import os
+import time
 from flask import Flask, render_template, request
 from google import genai
+from google.genai.errors import APIError
 
 app = Flask(__name__)
 
-# Environment variable theke API Key nibe
 api_key = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else None
 
@@ -15,14 +16,24 @@ def home():
     if request.method == "POST":
         user_prompt = request.form.get("prompt", "")
         if client and user_prompt:
-            try:
-                response = client.models.generate_content(
-                  model="gemini-2.0-flash",
-                    contents=user_prompt
-                )
-                ai_response = response.text
-            except Exception as e:
-                ai_response = f"Error: {str(e)}"
+            # 503 high demand handle korar jonno automatic retry loop
+            for attempt in range(3):
+                try:
+                    response = client.models.generate_content(
+                        model="gemini-3.8-flash",
+                        contents=user_prompt
+                    )
+                    ai_response = response.text
+                    break
+                except APIError as e:
+                    if e.code == 503 and attempt < 2:
+                        time.sleep(2)  # 2 second opekkha kore abar try korbe
+                        continue
+                    ai_response = f"Error: {str(e)}"
+                    break
+                except Exception as e:
+                    ai_response = f"Error: {str(e)}"
+                    break
         elif not client:
             ai_response = "API Key not configured properly."
 
