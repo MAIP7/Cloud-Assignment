@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Cloud Service Assignment</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+        .student-info { background: #f4f4f4; padding: 15px; border-radius: 6px; margin-bottom: 20px; }
+        textarea { width: 100%; height: 80px; margin-bottom: 10px; }
+        button { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .output { background: #eef; padding: 15px; border-radius: 6px; margin-top: 20px; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div class="student-info">
+        <!-- Apnar real information boshan -->
+        <h2>Name: [Apnar Name]</h2>
+        <h3>Student ID: [Apnar Student ID]</h3>
+    </div>
+
+    <h3>AI Text Generator (Powered by Gemini)</h3>
+    <form method="POST">
+        <textarea name="prompt" placeholder="Kono question ba topic likhun..." required>{{ prompt }}</textarea><br>
+        <button type="submit">Generate AI Response</button>
+    </form>
+
+    {% if response %}
+    <div class="output">
+        <strong>Result:</strong>
+        <p>{{ response }}</p>
+    </div>
+    {% endif %}
+</body>
+</html>
