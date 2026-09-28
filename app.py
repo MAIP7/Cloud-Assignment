@@ -7,12 +7,19 @@ app = Flask(__name__)
 api_key = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=api_key) if api_key else None
 
-# Terms chhara standard free models
-MODELS_TO_TRY = [
-    "gemma2-9b-it",
-    "llama-3.3-70b-versatile",
-    "mixtral-8x7b-32768"
-]
+def get_valid_models(client):
+    models_to_try = []
+    try:
+        models_data = client.models.list()
+        for m in models_data.data:
+            mid = m.id.lower()
+            # terms require kora, audio, vision ebong purono decommissioned bad
+            if any(x in mid for x in ["orpheus", "canopy", "whisper", "vision", "mixtral", "llama3-8b"]):
+                continue
+            models_to_try.append(m.id)
+    except Exception:
+        pass
+    return models_to_try
 
 @app.route("/", methods=["GET", "POST"])
 def home():
@@ -21,28 +28,24 @@ def home():
     if request.method == "POST":
         user_prompt = request.form.get("prompt", "")
         if client and user_prompt:
+            valid_models = get_valid_models(client)
             success = False
-            last_error = ""
-            for m in MODELS_TO_TRY:
+            last_err = ""
+            for m in valid_models:
                 try:
                     chat_completion = client.chat.completions.create(
-                        messages=[
-                            {
-                                "role": "user",
-                                "content": user_prompt,
-                            }
-                        ],
+                        messages=[{"role": "user", "content": user_prompt}],
                         model=m,
                     )
                     ai_response = chat_completion.choices[0].message.content
                     success = True
                     break
                 except Exception as e:
-                    last_error = str(e)
+                    last_err = str(e)
                     continue
 
             if not success:
-                ai_response = f"Error: {last_error}"
+                ai_response = f"Could not find an active model. Error: {last_err}"
         elif not client:
             ai_response = "API Key not configured properly."
 
