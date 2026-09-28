@@ -7,16 +7,12 @@ app = Flask(__name__)
 api_key = os.environ.get("GROQ_API_KEY")
 client = Groq(api_key=api_key) if api_key else None
 
-def get_active_model(client):
-    try:
-        # Account-e ekhon shobcheye latest je model active ache sheta dynamically nibe
-        models_data = client.models.list()
-        for m in models_data.data:
-            if "whisper" not in m.id and "vision" not in m.id:
-                return m.id
-    except Exception:
-        pass
-    return "mixtral-8x7b-32768"
+# Terms chhara standard free models
+MODELS_TO_TRY = [
+    "gemma2-9b-it",
+    "llama-3.3-70b-versatile",
+    "mixtral-8x7b-32768"
+]
 
 @app.route("/", methods=["GET", "POST"])
 def home():
@@ -25,20 +21,28 @@ def home():
     if request.method == "POST":
         user_prompt = request.form.get("prompt", "")
         if client and user_prompt:
-            try:
-                active_model = get_active_model(client)
-                chat_completion = client.chat.completions.create(
-                    messages=[
-                        {
-                            "role": "user",
-                            "content": user_prompt,
-                        }
-                    ],
-                    model=active_model,
-                )
-                ai_response = chat_completion.choices[0].message.content
-            except Exception as e:
-                ai_response = f"Error: {str(e)}"
+            success = False
+            last_error = ""
+            for m in MODELS_TO_TRY:
+                try:
+                    chat_completion = client.chat.completions.create(
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": user_prompt,
+                            }
+                        ],
+                        model=m,
+                    )
+                    ai_response = chat_completion.choices[0].message.content
+                    success = True
+                    break
+                except Exception as e:
+                    last_error = str(e)
+                    continue
+
+            if not success:
+                ai_response = f"Error: {last_error}"
         elif not client:
             ai_response = "API Key not configured properly."
 
